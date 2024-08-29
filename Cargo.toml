@@ -1,0 +1,10 @@
+[package]
+name = "brownie-tracker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7.5"
+serde = { version = "1.0.209", features = ["derive"] }
+sqlite = "0.36.1"
+tokio = { version = "1.39.3", features = ["rt-multi-thread"] }
