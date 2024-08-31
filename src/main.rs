@@ -1,4 +1,3 @@
-use aws_sdk_s3 as s3;
 use axum::{
     extract::Path,
     http::{header::HeaderMap, StatusCode},
@@ -10,11 +9,6 @@ use bytes::Bytes;
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::str;
-
-#[derive(Clone)]
-pub struct AppConfig {
-    pub s3_client: s3::client::Client,
-}
 
 use git2::{Cred, Error, RemoteCallbacks};
 use std::env;
@@ -55,17 +49,13 @@ async fn clone_repo() -> () {
 #[tokio::main]
 async fn main() {
     ensure_repo_cloned().await;
-    let config = aws_config::load_from_env().await;
-    let s3_client = aws_sdk_s3::Client::new(&config);
 
-    let server_config = AppConfig { s3_client };
     // build our application with a route
     let app = Router::new()
         // `GET /` goes to `root`
         .route("/", get(root))
         .route("/day/:date/", get(day))
-        .route("/day/:data/update", post(update))
-        .with_state(server_config);
+        .route("/day/:data/update", post(update));
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
