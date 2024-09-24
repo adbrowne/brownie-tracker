@@ -5,10 +5,10 @@ use axum::{
     routing::{get, post},
     Form, Json, Router,
 };
-use bytes::Bytes;
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::str;
+use tower_http::services::{ServeDir, ServeFile};
 
 use git2::{Cred, Error, RemoteCallbacks};
 use std::env;
@@ -54,8 +54,10 @@ async fn main() {
     let app = Router::new()
         // `GET /` goes to `root`
         .route("/", get(root))
-        .route("/day/:date/", get(day))
-        .route("/day/:data/update", post(update));
+        //.route("/api/day/:date", get(day))
+        //.route("/api/day/:data", post(update))
+        .route_service("/day/:date/", ServeFile::new("client/out/day.html"))
+        .nest_service("/_next", ServeDir::new("client/out/_next"));
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
