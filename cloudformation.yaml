@@ -13,6 +13,36 @@ Resources:
     DeletionPolicy: Retain
     Properties:
       BucketName: brownie-tracker-app
+  WwwRootBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: brownietracker.com
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: 404.html
+  WwwRootBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      PolicyDocument:
+        Id: MyPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Join 
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref WwwRootBucket
+                - /*
+      Bucket: !Ref WwwRootBucket
+
   VPC:
     Type: AWS::EC2::VPC
     Properties:
