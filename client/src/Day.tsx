@@ -3,7 +3,7 @@ import { format_date } from "./utils";
 
 
 
-export async function loader({ params }) {
+export async function loader({ params }: { params: any }) {
   const date: Date = new Date(params.date);
   var next_date = new Date();
   next_date.setDate(date.getDate() + 1);
@@ -19,8 +19,9 @@ export async function loader({ params }) {
 }
 
 export function Day() {
-  const { day_data } = useLoaderData();
+  const { day_data } = useLoaderData() as any;
   const contact = {
+    id: 0,
     first: "Your",
     last: "Name",
     avatar: "https://robohash.org/you.png?size=200x200",
@@ -53,7 +54,6 @@ export function Day() {
           ) : (
             <i>No Name</i>
           )}{" "}
-          <Favorite contact={contact} />
         </h1>
 
         {contact.twitter && (
@@ -91,24 +91,5 @@ export function Day() {
         </div>
       </div>
     </div>
-  );
-}
-
-function Favorite({ contact }) {
-  const favorite = contact.favorite;
-  return (
-    <Form method="post">
-      <button
-        name="favorite"
-        value={favorite ? "false" : "true"}
-        aria-label={
-          favorite
-            ? "Remove from favorites"
-            : "Add to favorites"
-        }
-      >
-        {favorite ? "★" : "☆"}
-      </button>
-    </Form>
   );
 }

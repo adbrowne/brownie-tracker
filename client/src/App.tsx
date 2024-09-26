@@ -1,19 +1,32 @@
 import './App.css'
-import { redirect } from "react-router-dom";
-import { format_date } from './utils.ts'
+import { Outlet } from "react-router-dom";
+import { useState, createContext } from 'react';
+
+interface UserContextType {
+  profile: any,
+  setProfile: any,
+}
+
+export const UserContext = createContext<UserContextType>({} as UserContextType);
 
 export const loader = async () => {
-  var today = new Date();
-
-  return redirect("/day/" + format_date(today));
 };
 
 
 export function App() {
+  const [profile, setProfile] = useState<any>([]);
 
   return (
     <>
-      Home
+      <UserContext.Provider value={{ profile: profile, setProfile: setProfile }}>
+        <div id="login">
+          {profile.email}
+        </div>
+        Home
+        <div id="detail">
+          <Outlet />
+        </div>
+      </UserContext.Provider>
     </>
   )
 }
