@@ -1,95 +1,148 @@
-import { Form, useLoaderData, Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { format_date } from "./utils";
+import { useState, useEffect } from "react";
 
 
+interface Exercise {
+  name: string,
+  reps: number,
+  sets: number,
+  done: number
+}
 
-export async function loader({ params }: { params: any }) {
-  const date: Date = new Date(params.date);
+interface ExerciseList {
+  name: string
+  items: Exercise[]
+}
+
+interface DayData {
+  date: string
+  next_date: string
+  prev_date: string
+  items: ExerciseList[]
+}
+
+async function get_day_data(date: Date) {
   var next_date = new Date();
   next_date.setDate(date.getDate() + 1);
   var prev_date = new Date();
   prev_date.setDate(date.getDate() - 1);
 
-  const day_data = {
+  const day_data: DayData = {
     "date": format_date(date),
     "next_date": format_date(next_date),
     "prev_date": format_date(prev_date),
+    items: [
+      {
+        name: "Physio",
+        items: [
+          { name: "Bend down", reps: 10, sets: 3, done: 0 },
+          { name: "Split squat", reps: 10, sets: 3, done: 0 },
+          { name: "Band out", reps: 10, sets: 3, done: 0 },
+          { name: "Band in", reps: 10, sets: 3, done: 0 },
+        ]
+      }
+    ]
   };
   return { day_data };
 }
+export async function loader({ params }: { params: any }) {
+  const date: Date = new Date(params.date);
+  return get_day_data(date);
+}
 
-export function Day() {
-  const { day_data } = useLoaderData() as any;
-  const contact = {
-    id: 0,
-    first: "Your",
-    last: "Name",
-    avatar: "https://robohash.org/you.png?size=200x200",
-    twitter: "your_handle",
-    notes: "Some notes",
-    favorite: true,
-  };
+export function ExerciseComponent({ item, onDone }: { item: Exercise, onDone: () => void }) {
+  return (
+    <li>
+      {item.name} x {item.reps}. {item.done}/{item.sets} sets.
+      <button onClick={() => onDone()}>+1</button>
+    </li>
+  )
+}
+
+export function Editable({ value, onChange }: { value: string, onChange: (new_value: string) => void }) {
+  let [mode, setMode] = useState('view');
+
+  if (mode == "edit") {
+    return (<>
+      <input
+        onBlur={() => setMode("view")}
+        onKeyDown={(e) => { if (e.key == "Enter") { setMode("view") } }}
+        type="text"
+        onChange={(e => onChange(e.currentTarget.value))}
+        defaultValue={value} />
+    </>);
+  }
+  else {
+    return (
+      <span
+        onClick={() => setMode("edit")}>{value}</span>);
+  }
+
+}
+
+export function ExerciseListComponent({ item, onUpdate }: { item: ExerciseList, onUpdate: (item: ExerciseList) => void }) {
+  function name_change(new_value: string) {
+    const updated_item = Object.assign({}, item);
+    updated_item.name = new_value;
+    onUpdate(updated_item);
+  }
+
+  function onDone(index: number) {
+    const current_value = item.items[index].done | 0;
+    const updated_item = Object.assign({}, item);
+    updated_item.items[index].done = current_value + 1;
+    onUpdate(updated_item);
+  }
 
   return (
-    <div id="contact">
-      <Link to={'/day/' + day_data.prev_date}>Prev</Link>
-      {day_data.date}
-      <Link to={'/day/' + day_data.next_date}>Next</Link>
+    <div>
+      <Editable onChange={name_change} value={item.name} />
+      <ul>
+        {
+          item.items.map((sub_item, index) => (
+            <ExerciseComponent key={index} item={sub_item} onDone={() => onDone(index)} />
+          ))
+        }
+      </ul>
+    </div>);
+}
+
+export function Day() {
+  const [dayData, setDayData] = useState<DayData>();
+
+  const { date: route_date } = useParams<{ date: string }>();
+
+  useEffect(() => {
+    if (route_date) {
+      const date: Date = new Date(route_date);
+      get_day_data(date).then(d => setDayData(d.day_data));
+    }
+  }, [route_date])
+
+  function update_exercise_list_item(item: ExerciseList, index: number) {
+    const update_data = Object.assign({}, dayData, {}) as DayData;
+    update_data.items[index] = item;
+    setDayData(update_data);
+  }
+
+  return (
+    <div id="day">
+      <Link to={'/day/' + dayData?.prev_date}>Prev</Link>
+      {dayData?.date}
+      <Link to={'/day/' + dayData?.next_date}>Next</Link>
       <div>
-        <img
-          key={contact.avatar}
-          src={
-            contact.avatar ||
-            `https://robohash.org/${contact.id}.png?size=200x200`
-          }
-        />
-      </div>
-
-      <div>
-        <h1>
-          {contact.first || contact.last ? (
-            <>
-              {contact.first} {contact.last}
-            </>
-          ) : (
-            <i>No Name</i>
-          )}{" "}
-        </h1>
-
-        {contact.twitter && (
-          <p>
-            <a
-              target="_blank"
-              href={`https://twitter.com/${contact.twitter}`}
-            >
-              {contact.twitter}
-            </a>
-          </p>
-        )}
-
-        {contact.notes && <p>{contact.notes}</p>}
-
         <div>
-          <Form action="edit">
-            <button type="submit">Edit</button>
-          </Form>
-          <Form
-            method="post"
-            action="destroy"
-            onSubmit={(event) => {
-              if (
-                !confirm(
-                  "Please confirm you want to delete this record."
-                )
-              ) {
-                event.preventDefault();
-              }
-            }}
-          >
-            <button type="submit">Delete</button>
-          </Form>
+          {
+            dayData?.items.map((item: ExerciseList, index: number) => (
+              <ExerciseListComponent item={item} key={index} onUpdate={(update_item) => update_exercise_list_item(update_item, index)} />
+            ))
+          }
         </div>
       </div>
+      <pre>
+        {JSON.stringify(dayData, null, 2)}
+      </pre>
     </div>
   );
 }

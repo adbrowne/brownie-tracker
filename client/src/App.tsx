@@ -1,6 +1,7 @@
 import './App.css'
-import { Outlet } from "react-router-dom";
-import { useState, createContext } from 'react';
+import { Outlet, Link } from "react-router-dom";
+import { useEffect, useState, createContext } from 'react';
+import PWABadge from './PWABadge';
 
 interface UserContextType {
   profile: any,
@@ -16,13 +17,21 @@ export const loader = async () => {
 export function App() {
   const [profile, setProfile] = useState<any>([]);
 
+  useEffect(() => {
+    console.log("Profile changed")
+    console.log(profile);
+  }, [profile])
+
+
   return (
     <>
       <UserContext.Provider value={{ profile: profile, setProfile: setProfile }}>
         <div id="login">
-          {profile.email}
+          User: {profile.email}
         </div>
-        Home
+        <PWABadge />
+        <Link to="/">Home</Link>
+        <Link to="/login">Login</Link>
         <div id="detail">
           <Outlet />
         </div>
