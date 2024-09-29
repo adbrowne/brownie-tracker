@@ -1,51 +1,13 @@
+import {
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { Link, useParams } from "react-router-dom";
-import { format_date } from "./utils";
 import { useState, useEffect } from "react";
+import { DayData, Exercise, ExerciseList, get_day as get_day_data } from './api.ts'
+import axios from 'axios';
 
 
-interface Exercise {
-  name: string,
-  reps: number,
-  sets: number,
-  done: number
-}
-
-interface ExerciseList {
-  name: string
-  items: Exercise[]
-}
-
-interface DayData {
-  date: string
-  next_date: string
-  prev_date: string
-  items: ExerciseList[]
-}
-
-async function get_day_data(date: Date) {
-  var next_date = new Date();
-  next_date.setDate(date.getDate() + 1);
-  var prev_date = new Date();
-  prev_date.setDate(date.getDate() - 1);
-
-  const day_data: DayData = {
-    "date": format_date(date),
-    "next_date": format_date(next_date),
-    "prev_date": format_date(prev_date),
-    items: [
-      {
-        name: "Physio",
-        items: [
-          { name: "Bend down", reps: 10, sets: 3, done: 0 },
-          { name: "Split squat", reps: 10, sets: 3, done: 0 },
-          { name: "Band out", reps: 10, sets: 3, done: 0 },
-          { name: "Band in", reps: 10, sets: 3, done: 0 },
-        ]
-      }
-    ]
-  };
-  return { day_data };
-}
 export async function loader({ params }: { params: any }) {
   const date: Date = new Date(params.date);
   return get_day_data(date);
@@ -126,8 +88,40 @@ export function Day() {
     setDayData(update_data);
   }
 
+  // Queries
+  const { isPending, isError, data, error } = useQuery({
+    queryKey: ['daydatas', route_date],
+    queryFn: async () => {
+      if (route_date) {
+        return axios
+          .get(`https://postman-echo.com/get`, {
+            headers: {
+              Accept: 'application/json'
+            }
+          })
+        /*const date: Date = new Date(route_date);
+        console.log("running query")
+        return get_day_data(date);*/
+      }
+      else {
+        return Promise.reject(new Error('No route_date'))
+      }
+    },
+    networkMode: 'offlineFirst'
+  })
+
+  if (isPending) {
+    return <span>Loading...</span>
+  }
+
+  if (isError) {
+    return <span>Error: {error.message}</span>
+  }
+
+
   return (
     <div id="day">
+      <pre>{JSON.stringify(data)}</pre>
       <Link to={'/day/' + dayData?.prev_date}>Prev</Link>
       {dayData?.date}
       <Link to={'/day/' + dayData?.next_date}>Next</Link>

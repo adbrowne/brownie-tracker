@@ -9,11 +9,13 @@ function Login() {
 
   const login = useGoogleLogin({
     onSuccess: (codeResponse) => setUser(codeResponse),
-    onError: (error) => console.log('Login Failed:', error)
+    onError: (error) => console.log('Login Failed:', error),
+    flow: 'auth-code'
   });
 
   useEffect(
     () => {
+      console.log("user", user);
       if (user) {
         axios
           .get(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${user.access_token}`, {
