@@ -135,6 +135,7 @@ dependencies = [
  "git2",
  "serde",
  "tokio",
+ "tower",
  "tower-http",
 ]
 

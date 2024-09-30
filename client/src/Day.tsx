@@ -1,6 +1,5 @@
 import {
   useQuery,
-  useQueryClient,
 } from '@tanstack/react-query'
 import { Link, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
