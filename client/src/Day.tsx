@@ -93,7 +93,7 @@ export function Day() {
     queryFn: async () => {
       if (route_date) {
         return axios
-          .get(`https://postman-echo.com/get`, {
+          .get(`/api/get`, {
             headers: {
               Accept: 'application/json'
             }

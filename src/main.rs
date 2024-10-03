@@ -56,10 +56,7 @@ async fn main() {
     // build our application with a route
     let app = Router::new()
         .route("/", get(root))
-        .route(
-            "/foo/",
-            get_service(ServeFile::new("client/dist/index.html")),
-        )
+        .route("/api/get", get(test_get))
         .route("/day/:date/", get(get_static_file))
         .fallback_service(ServeDir::new("client/dist"))
         .layer(middleware::from_fn(my_auth_middleware))
@@ -194,6 +191,14 @@ async fn root() -> Redirect {
     let current_time_uk_str = current_time_uk.format("%Y-%m-%d");
     let redirect_url = format!("/day/{}/", current_time_uk_str);
     Redirect::to(&redirect_url)
+}
+
+async fn test_get() -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-type", "application/json")
+        .body(Body::from("{\"foo\": \"bar\"}"))
+        .unwrap()
 }
 
 async fn update(
