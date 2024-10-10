@@ -1,4 +1,6 @@
 import {
+    DefaultError,
+    useMutation,
   useQuery,
 } from '@tanstack/react-query'
 import { Link, useParams } from "react-router-dom";
@@ -81,26 +83,37 @@ export function Day() {
     }
   }, [route_date])
 
-  function update_exercise_list_item(item: ExerciseList, index: number) {
-    const update_data = Object.assign({}, dayData, {}) as DayData;
-    update_data.items[index] = item;
-    setDayData(update_data);
+  function update_data(updated_data : DayData) {
+    setDayData(updated_data);
+    mutation.mutate(updated_data);
   }
 
+  function update_exercise_list_item(item: ExerciseList, index: number) {
+    const updated_data = Object.assign({}, dayData, {}) as DayData;
+    updated_data.items[index] = item;
+    update_data(updated_data);
+  }
+
+  const mutation = useMutation<DayData, DefaultError, DayData>({
+    mutationFn: (updateDay) => {
+      const body = { "content": JSON.stringify(updateDay)};
+      const headers = {headers: {
+            'Content-Type': 'application/json',
+        }};
+      return axios.post(`/api/day/${route_date}`, body, headers);
+    },
+  })
   // Queries
   const { isPending, isError, data, error } = useQuery({
     queryKey: ['daydatas', route_date],
     queryFn: async () => {
       if (route_date) {
         return axios
-          .get(`/api/get`, {
+          .get(`/api/day/${route_date}`, {
             headers: {
               Accept: 'application/json'
             }
           })
-        /*const date: Date = new Date(route_date);
-        console.log("running query")
-        return get_day_data(date);*/
       }
       else {
         return Promise.reject(new Error('No route_date'))
@@ -120,7 +133,6 @@ export function Day() {
 
   return (
     <div id="day">
-      <pre>{JSON.stringify(data)}</pre>
       <Link to={'/day/' + dayData?.prev_date}>Prev</Link>
       {dayData?.date}
       <Link to={'/day/' + dayData?.next_date}>Next</Link>
@@ -135,6 +147,9 @@ export function Day() {
       </div>
       <pre>
         {JSON.stringify(dayData, null, 2)}
+      </pre>
+      <pre>
+        {JSON.stringify(data.data, null, 2)}
       </pre>
     </div>
   );

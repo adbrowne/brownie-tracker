@@ -1,29 +1,28 @@
+use serde::Deserialize;
 use axum::{
     body::Body,
     extract::{Path, Request},
     http::{header::HeaderMap, HeaderName, HeaderValue, StatusCode, Uri},
     middleware::{self, Next},
-    response::{Html, IntoResponse, Redirect, Response},
-    routing::{get, get_service, post},
-    Form, Json, Router,
+    response::{Html, Redirect, Response},
+    routing::{get, post},
+    Form, Router, Json,
 };
 use chrono::prelude::*;
-use serde::{Deserialize, Serialize};
 use std::str::{self, FromStr};
-use tower_http::services::{ServeDir, ServeFile};
+use tower_http::services::ServeDir;
 
-use git2::{Cred, Error, RemoteCallbacks};
+use git2::{Cred, RemoteCallbacks};
 use std::env;
-use tower::ServiceExt;
 
 const REPO_PATH: &str = "./data-repo";
 const REPO_URL: &str = "git@github.com:adbrowne/brownie-tracker-data.git";
-async fn ensure_repo_cloned() -> () {
+async fn ensure_repo_cloned() {
     if !std::path::Path::new(REPO_PATH).exists() {
         clone_repo().await;
     }
 }
-async fn clone_repo() -> () {
+async fn clone_repo() {
     // Prepare callbacks.
     let mut callbacks = RemoteCallbacks::new();
     callbacks.credentials(|_url, username_from_url, _allowed_types| {
@@ -56,7 +55,8 @@ async fn main() {
     // build our application with a route
     let app = Router::new()
         .route("/", get(root))
-        .route("/api/get", get(test_get))
+        .route("/api/day/:date", get(get_date))
+        .route("/api/day/:date", post(post_date))
         .route("/day/:date/", get(get_static_file))
         .fallback_service(ServeDir::new("client/dist"))
         .layer(middleware::from_fn(my_auth_middleware))
@@ -193,12 +193,28 @@ async fn root() -> Redirect {
     Redirect::to(&redirect_url)
 }
 
-async fn test_get() -> Response {
+async fn get_date(Path(date) : Path<String>) -> Response {
+    let s = match std::fs::read_to_string(get_file_path(date)) {
+        Ok(text) => text,
+        Err(_err) => String::from(""),
+    };
     Response::builder()
         .status(StatusCode::OK)
         .header("Content-type", "application/json")
-        .body(Body::from("{\"foo\": \"bar\"}"))
+        .body(Body::from(s))
         .unwrap()
+}
+
+async fn post_date(
+    // this argument tells axum to parse the request body
+    // as JSON into a `CreateUser` type
+    Path(date): Path<String>,
+    Json(payload): Json<UpdateData>,
+) -> StatusCode {
+    println!("{:?}", payload);
+
+    std::fs::write(get_file_path(date), payload.content).unwrap();
+    StatusCode::OK
 }
 
 async fn update(
