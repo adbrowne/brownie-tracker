@@ -2,7 +2,7 @@ use serde::Deserialize;
 use axum::{
     body::Body,
     extract::{Path, Request},
-    http::{header::HeaderMap, HeaderName, HeaderValue, StatusCode, Uri},
+    http::{header::HeaderMap, HeaderName, HeaderValue, StatusCode},
     middleware::{self, Next},
     response::{Html, Redirect, Response},
     routing::{get, post},
@@ -79,38 +79,6 @@ fn get_file_path(date: String) -> String {
     format!("{}/{}.txt", REPO_PATH, date)
 }
 
-// basic handler that responds with a static string
-async fn day(Path((date)): Path<(String)>) -> Result<Html<String>, StatusCode> {
-    let s = match std::fs::read_to_string(get_file_path(date)) {
-        Ok(text) => text,
-        Err(_err) => String::from(""),
-    };
-    let content = format!("<html>
-        <head>
-            <script src=\"https://unpkg.com/htmx.org@2.0.2\" integrity=\"sha384-Y7hw+L/jvKeWIRRkqWYfPcvVxHzVzn5REgzbawhxAuQGwX1XWe70vji+VSeHOThJ\" crossorigin=\"anonymous\"></script>
-            <style>
-                .wrapper {{
-                    padding: 20px;
-                    margin: 15px 0;
-                    background-color: #0f9d58;
-                }}
-
-                textarea {{
-                    font-size: 20px;
-                    width: 100%;
-                }}
-            </style>
-        </head>
-        <body>
-            <form method=\"POST\" action=\"./update\">
-                <textarea cols=\"120\" rows=\"20\" name=\"content\">{}</textarea>
-                <input type=\"submit\"></input>
-            </form>
-        </body>
-    </html>", s);
-    Ok(Html(content))
-}
-
 const AUTH_COOKIE_NAME: &str = "tracker_auth";
 const AUTH_COOKIE_VALUE: &str = "b8b0cd92-3f2a-4a01-ab6a-6c8d96b12732";
 
@@ -136,7 +104,6 @@ fn login_response() -> Response {
 }
 
 async fn my_auth_middleware(request: Request, next: Next) -> axum::response::Response {
-    println!("running middleware");
     let cookie_header = request.headers().get("Cookie");
     match cookie_header {
         Some(cookies) => {
@@ -168,7 +135,7 @@ async fn login_post(Form(payload): Form<LoginData>) -> (StatusCode, HeaderMap, &
     let mut headers = HeaderMap::new();
     if payload.password == "abcd1234" {
         let cookie_value: &str =
-            &format!("{AUTH_COOKIE_NAME}={AUTH_COOKIE_VALUE}; Secure; HttpOnly");
+            &format!("{AUTH_COOKIE_NAME}={AUTH_COOKIE_VALUE}; Secure; HttpOnly; Max-Age=31536000");
         headers.insert(
             HeaderName::from_str("Set-Cookie").unwrap(),
             HeaderValue::from_str(cookie_value).unwrap(),
@@ -179,17 +146,16 @@ async fn login_post(Form(payload): Form<LoginData>) -> (StatusCode, HeaderMap, &
         );
         (StatusCode::SEE_OTHER, headers, "")
     } else {
-        return redirect_to_login();
+        redirect_to_login()
     }
 }
 
 async fn root() -> Redirect {
-    //println!("{?}", headers);
-    let uk_timezone = FixedOffset::east_opt(1 * 60 * 60).unwrap();
+    let au_timezone = FixedOffset::east_opt(11 * 60 * 60).unwrap();
     let current_time_utc = Utc::now();
-    let current_time_uk = current_time_utc.with_timezone(&uk_timezone);
-    let current_time_uk_str = current_time_uk.format("%Y-%m-%d");
-    let redirect_url = format!("/day/{}/", current_time_uk_str);
+    let current_time_au = current_time_utc.with_timezone(&au_timezone);
+    let current_time_au_str = current_time_au.format("%Y-%m-%d");
+    let redirect_url = format!("/day/{}/", current_time_au_str);
     Redirect::to(&redirect_url)
 }
 
@@ -206,8 +172,6 @@ async fn get_date(Path(date) : Path<String>) -> Response {
 }
 
 async fn post_date(
-    // this argument tells axum to parse the request body
-    // as JSON into a `CreateUser` type
     Path(date): Path<String>,
     Json(payload): Json<UpdateData>,
 ) -> StatusCode {
@@ -215,18 +179,6 @@ async fn post_date(
 
     std::fs::write(get_file_path(date), payload.content).unwrap();
     StatusCode::OK
-}
-
-async fn update(
-    // this argument tells axum to parse the request body
-    // as JSON into a `CreateUser` type
-    Path(date): Path<String>,
-    Form(payload): Form<UpdateData>,
-) -> Redirect {
-    println!("{:?}", payload);
-
-    std::fs::write(get_file_path(date), payload.content).unwrap();
-    Redirect::to("/")
 }
 
 // the input to our `create_user` handler
